@@ -1,13 +1,10 @@
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Graph {
     private final int width;
     private final int height;
-    private final Cell[][] grid;
-    private final List<Cell> frontier = new ArrayList<>();
+    private Map<Cell, List<Cell>> adjacencyList = new HashMap<>();
     private final Random rand = new Random();
 
     private static final int N = 1, S = 2, E = 4, W = 8;
@@ -16,191 +13,125 @@ public class Graph {
     public Graph(int width, int height) {
         this.width = width;
         this.height = height;
-        this.grid = new Cell[height][width];
+        // Initialize the graph with all cells having no neighbors
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                grid[y][x] = new Cell();
-                grid[y][x].setCoordinates(x, y);
+                Cell cell = new Cell();
+                cell.setCoordinates(x, y);
+                adjacencyList.put(cell, new ArrayList<>());
             }
         }
     }
 
     public void generateMaze() {
+        System.out.println("Generating maze...");
         // Start with a random cell
-        int startY = rand.nextInt(height);
-        int startX = rand.nextInt(width);
+        Cell startCell = getRandomCell();
+        startCell.in = true;
+        addFrontier(startCell);
 
-        System.out.println("Starting point:" + startX + " " + startY);
+        while (!allCellsIn()) {
 
-        //this is where the maze begins
-        grid[startY][startX].in = true;
+            System.out.println("Cells in: " + adjacencyList.keySet().stream().filter(c -> c.in).count() + " / " + adjacencyList.size());
 
-        //we need to add it's negihbors to the frontier
-        addFrontier(startX, startY);
+            Cell frontierCell = removeRandomFrontierCell();
+            List<Cell> inNeighbors = getInNeighbors(frontierCell);
 
-        //We continue to add cells to the maze until the frontier is empty
-        while (!frontier.isEmpty()) {
-
-            //We remove a random cell from the frontier randomly
-            Cell frontierCell = frontier.remove(rand.nextInt(frontier.size()));
-
-            System.out.println("Frontier cell coordinates: " + frontierCell.x + " " + frontierCell.y);
-
-            //We find the neighbors of the frontier cell that are in the maze
-            List<Cell> inNeighbors = getInNeighbors(frontierCell.x, frontierCell.y);
-            System.out.println("In neighbors found: " + inNeighbors.size());
-            System.out.println("In neighbors found: " + inNeighbors.get(0).x + " " + inNeighbors.get(0).y);
-
-            //If there are neighbors in the maze we connect the frontier cell to one of them
             if (!inNeighbors.isEmpty()) {
-
-                inNeighbors = inNeighbors.stream().filter(c -> c.x != frontierCell.x || c.y != frontierCell.y).toList();
-
-                if (!inNeighbors.isEmpty()) {
-                    Cell neighbor = inNeighbors.get(rand.nextInt(inNeighbors.size()));
-                    System.out.println("Neighbor found: " + neighbor.x + " " + neighbor.y);
-                    connectCells(neighbor, frontierCell);
-                }
-
                 Cell neighbor = inNeighbors.get(rand.nextInt(inNeighbors.size()));
-
                 connectCells(neighbor, frontierCell);
+                addFrontier(frontierCell);
             }
-
-            frontierCell.in = true; //We mark the frontier cell as in the maze
-            addFrontier(frontierCell.x, frontierCell.y); //Start again
         }
+
+        System.out.println("Maze generated!");
     }
 
-    private void addFrontier(int x, int y) {
+    private Cell getRandomCell() {
+        int x = rand.nextInt(width);
+        int y = rand.nextInt(height);
+        return findCell(x, y);
+    }
+
+    private void addFrontier(Cell cell) {
+        int x = cell.x;
+        int y = cell.y;
         for (int direction : DIRECTIONS) {
             int nx = x, ny = y;
-
             switch (direction) {
                 case N: ny--; break;
                 case S: ny++; break;
                 case E: nx++; break;
                 case W: nx--; break;
             }
-            if (nx >= 0 && nx < width && ny >= 0 && ny < height && !grid[ny][nx].in && !grid[ny][nx].frontier) {
-                System.out.println("Frontier found coordinates: " + nx + " " + ny);
-                grid[ny][nx].frontier = true;
-                frontier.add(grid[ny][nx].setCoordinates(nx, ny));
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                Cell neighbor = findCell(nx, ny);
+                if (!neighbor.in && !adjacencyList.get(neighbor).contains(cell)) {
+                    adjacencyList.get(neighbor).add(cell);
+                }
             }
         }
     }
 
-    private List<Cell> getInNeighbors(int x, int y) {
-
-        //We check the neighbors of a cell that are in the maze in all directions
-
-        List<Cell> neighbors = new ArrayList<>();
-
-        for (int direction : DIRECTIONS) {
-            int nx = x, ny = y;
-
-            switch (direction) {
-                case N: ny--; break;
-                case S: ny++; break;
-                case E: nx++; break;
-                case W: nx--; break;
-            }
-
-            if (nx >= 0 && nx < width && ny >= 0 && ny < height && grid[ny][nx].in && !(nx == x && ny == y)) {
-                neighbors.add(grid[ny][nx]);
-            }
-        }
-        return neighbors;
+    private List<Cell> getInNeighbors(Cell cell) {
+        return adjacencyList.get(cell).stream().filter(c -> c.in).collect(Collectors.toList());
     }
 
     private void connectCells(Cell a, Cell b) {
+        adjacencyList.get(a).add(b);
+        adjacencyList.get(b).add(a);
         a.in = true;
         b.in = true;
-        if (a.x == b.x) {
-            if (a.y < b.y) {
-                a.south = true;
-                b.north = true;
-            } else {
-                a.north = true;
-                b.south = true;
-            }
-        } else if (a.y == b.y) {
-            if (a.x < b.x) {
-                System.out.println();
-                a.east = true;
-                b.west = true;
-            } else {
-                a.west = true;
-                b.east = true;
-            }
-        }
     }
 
-    public void displayMaze() {
-        // Top border
-        for (int i = 0; i < width; i++) {
-            System.out.print("+-");
-        }
-        System.out.println("+");
-
-        // Each row
-        for (int y = 0; y < height; y++) {
-            // West border
-            System.out.print("|");
-
-            for (int x = 0; x < width; x++) {
-                // South wall
-                System.out.print(grid[y][x].south ? " " : "_");
-
-                // East wall: print a space if there's no wall, or a '|' if there is a wall
-                if (grid[y][x].east) {
-                    System.out.print((grid[y][x].south || (y + 1 < height && grid[y + 1][x].east)) ? " " : "_");
-                } else {
-                    System.out.print("|");
-                }
-            }
-
-            System.out.println();
-        }
+    private boolean allCellsIn() {
+        return adjacencyList.keySet().stream().allMatch(c -> c.in);
     }
 
-    public Cell[][] getGrid() {
-        return grid;
+    private Cell removeRandomFrontierCell() {
+        List<Cell> frontierCells = new ArrayList<>(adjacencyList.keySet().stream().filter(c -> !c.in && !adjacencyList.get(c).isEmpty()).toList());
+        System.out.println("Frontier cells: " + frontierCells.size());
+        return frontierCells.remove(rand.nextInt(frontierCells.size()));
+    }
+
+    private Cell findCell(int x, int y) {
+        for (Cell cell : adjacencyList.keySet()) {
+            if (cell.x == x && cell.y == y) {
+                return cell;
+            }
+        }
+        return null; // Should never happen
     }
 
     public int getWidth() {
         return width;
     }
 
-    public int getHeight() {
-        return height;
+    public Map<Cell, List<Cell>> getAdjacencyList() {
+        return adjacencyList;
     }
 
-    public void verifyMaze() {
-        boolean[][] visited = new boolean[height][width];
-        dfs(0, 0, visited); // Starting from the top-left cell
+    public void displayMaze() {
+        System.out.print(" ");
+        for (int i = 0; i < width * 2 - 1; i++) {
+            System.out.print("_");
+        }
+        System.out.println();
 
         for (int y = 0; y < height; y++) {
+            System.out.print("|");
             for (int x = 0; x < width; x++) {
-                if (!visited[y][x]) {
-                    System.out.println("Unreachable cell found at: " + x + ", " + y);
-                    return;
+                Cell cell = findCell(x, y);
+                int finalY = y;
+                System.out.print(adjacencyList.get(cell).stream().anyMatch(c -> c.y == finalY + 1) ? " " : "_");
+                if (x < width - 1) {
+                    Cell rightCell = findCell(x + 1, y);
+                    System.out.print(adjacencyList.get(cell).contains(rightCell) ? " " : "|");
+                } else {
+                    System.out.print("|");
                 }
             }
+            System.out.println();
         }
-        System.out.println("All cells are reachable.");
     }
-
-    private void dfs(int x, int y, boolean[][] visited) {
-
-        if (x < 0 || x >= width || y < 0 || y >= height || visited[y][x]) return;
-
-        visited[y][x] = true;
-
-        if (grid[y][x].north) dfs(x, y - 1, visited);
-        if (grid[y][x].south) dfs(x, y + 1, visited);
-        if (grid[y][x].east) dfs(x + 1, y, visited);
-        if (grid[y][x].west) dfs(x - 1, y, visited);
-    }
-
 }

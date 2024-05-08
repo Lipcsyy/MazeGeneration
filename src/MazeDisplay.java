@@ -1,5 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
+import java.util.Map;
 
 public class MazeDisplay extends JPanel {
     private final Graph mazeGenerator;
@@ -16,24 +18,30 @@ public class MazeDisplay extends JPanel {
     }
 
     private void drawMaze(Graphics g) {
-        Cell[][] grid = mazeGenerator.getGrid();
+        Map<Cell, List<Cell>> adjacencyList = mazeGenerator.getAdjacencyList();
         int cellSize = 800 / mazeGenerator.getWidth(); // Calculate cell size based on maze width and panel size
-        for (int y = 0; y < mazeGenerator.getHeight(); y++) {
-            for (int x = 0; x < mazeGenerator.getWidth(); x++) {
-                int cellX = x * cellSize;
-                int cellY = y * cellSize;
-                if (!grid[y][x].north) {
-                    g.drawLine(cellX, cellY, cellX + cellSize, cellY);
-                }
-                if (!grid[y][x].south) {
-                    g.drawLine(cellX, cellY + cellSize, cellX + cellSize, cellY + cellSize);
-                }
-                if (!grid[y][x].east) {
-                    g.drawLine(cellX + cellSize, cellY, cellX + cellSize, cellY + cellSize);
-                }
-                if (!grid[y][x].west) {
-                    g.drawLine(cellX, cellY, cellX, cellY + cellSize);
-                }
+
+        for (Cell cell : adjacencyList.keySet()) {
+            int cellX = cell.x * cellSize;
+            int cellY = cell.y * cellSize;
+
+            // Determine if there are walls based on connectivity in the adjacency list
+            boolean hasNorth = adjacencyList.get(cell).stream().anyMatch(c -> c.y == cell.y - 1);
+            boolean hasSouth = adjacencyList.get(cell).stream().anyMatch(c -> c.y == cell.y + 1);
+            boolean hasEast = adjacencyList.get(cell).stream().anyMatch(c -> c.x == cell.x + 1);
+            boolean hasWest = adjacencyList.get(cell).stream().anyMatch(c -> c.x == cell.x - 1);
+
+            if (!hasNorth) {
+                g.drawLine(cellX, cellY, cellX + cellSize, cellY);
+            }
+            if (!hasSouth) {
+                g.drawLine(cellX, cellY + cellSize, cellX + cellSize, cellY + cellSize);
+            }
+            if (!hasEast) {
+                g.drawLine(cellX + cellSize, cellY, cellX + cellSize, cellY + cellSize);
+            }
+            if (!hasWest) {
+                g.drawLine(cellX, cellY, cellX, cellY + cellSize);
             }
         }
     }
@@ -51,11 +59,6 @@ public class MazeDisplay extends JPanel {
         Graph maze = new Graph(20, 20); // Adjust size as needed
         maze.generateMaze();
 
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                createAndShowGUI(maze);
-            }
-        });
+        SwingUtilities.invokeLater(() -> createAndShowGUI(maze));
     }
 }
-

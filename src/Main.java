@@ -5,7 +5,6 @@ public class Main {
 
         Graph startingGraph = new Graph(2,1);
         startingGraph.generateMaze();
-        startingGraph.verifyMaze();
         startingGraph.displayMaze();
     }
 }
