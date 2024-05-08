@@ -3,7 +3,7 @@
 public class Main {
     public static void main( String[] args ) {
 
-        Graph startingGraph = new Graph(8,8);
+        Graph startingGraph = new Graph(2,1);
         startingGraph.generateMaze();
         startingGraph.verifyMaze();
         startingGraph.displayMaze();

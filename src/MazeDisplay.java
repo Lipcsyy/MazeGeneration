@@ -48,7 +48,7 @@ public class MazeDisplay extends JPanel {
     }
 
     public static void main(String[] args) {
-        Graph maze = new Graph(16, 9); // Adjust size as needed
+        Graph maze = new Graph(20, 20); // Adjust size as needed
         maze.generateMaze();
 
         SwingUtilities.invokeLater(new Runnable() {

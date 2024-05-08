@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 public class Graph {
     private final int width;
@@ -19,6 +20,7 @@ public class Graph {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 grid[y][x] = new Cell();
+                grid[y][x].setCoordinates(x, y);
             }
         }
     }
@@ -27,6 +29,8 @@ public class Graph {
         // Start with a random cell
         int startY = rand.nextInt(height);
         int startX = rand.nextInt(width);
+
+        System.out.println("Starting point:" + startX + " " + startY);
 
         //this is where the maze begins
         grid[startY][startX].in = true;
@@ -40,12 +44,26 @@ public class Graph {
             //We remove a random cell from the frontier randomly
             Cell frontierCell = frontier.remove(rand.nextInt(frontier.size()));
 
+            System.out.println("Frontier cell coordinates: " + frontierCell.x + " " + frontierCell.y);
+
             //We find the neighbors of the frontier cell that are in the maze
             List<Cell> inNeighbors = getInNeighbors(frontierCell.x, frontierCell.y);
+            System.out.println("In neighbors found: " + inNeighbors.size());
+            System.out.println("In neighbors found: " + inNeighbors.get(0).x + " " + inNeighbors.get(0).y);
 
             //If there are neighbors in the maze we connect the frontier cell to one of them
             if (!inNeighbors.isEmpty()) {
+
+                inNeighbors = inNeighbors.stream().filter(c -> c.x != frontierCell.x || c.y != frontierCell.y).toList();
+
+                if (!inNeighbors.isEmpty()) {
+                    Cell neighbor = inNeighbors.get(rand.nextInt(inNeighbors.size()));
+                    System.out.println("Neighbor found: " + neighbor.x + " " + neighbor.y);
+                    connectCells(neighbor, frontierCell);
+                }
+
                 Cell neighbor = inNeighbors.get(rand.nextInt(inNeighbors.size()));
+
                 connectCells(neighbor, frontierCell);
             }
 
@@ -56,7 +74,6 @@ public class Graph {
 
     private void addFrontier(int x, int y) {
         for (int direction : DIRECTIONS) {
-
             int nx = x, ny = y;
 
             switch (direction) {
@@ -66,6 +83,7 @@ public class Graph {
                 case W: nx--; break;
             }
             if (nx >= 0 && nx < width && ny >= 0 && ny < height && !grid[ny][nx].in && !grid[ny][nx].frontier) {
+                System.out.println("Frontier found coordinates: " + nx + " " + ny);
                 grid[ny][nx].frontier = true;
                 frontier.add(grid[ny][nx].setCoordinates(nx, ny));
             }
@@ -88,7 +106,7 @@ public class Graph {
                 case W: nx--; break;
             }
 
-            if (nx >= 0 && nx < width && ny >= 0 && ny < height && grid[ny][nx].in) {
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height && grid[ny][nx].in && !(nx == x && ny == y)) {
                 neighbors.add(grid[ny][nx]);
             }
         }
@@ -96,6 +114,8 @@ public class Graph {
     }
 
     private void connectCells(Cell a, Cell b) {
+        a.in = true;
+        b.in = true;
         if (a.x == b.x) {
             if (a.y < b.y) {
                 a.south = true;
@@ -106,6 +126,7 @@ public class Graph {
             }
         } else if (a.y == b.y) {
             if (a.x < b.x) {
+                System.out.println();
                 a.east = true;
                 b.west = true;
             } else {
